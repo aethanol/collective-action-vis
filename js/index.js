@@ -1,6 +1,6 @@
 var svg = d3.select("svg"),
-    margin = {top: 20, right: 20, bottom: 110, left: 40},
-    margin2 = {top: 530, right: 20, bottom: 30, left: 40},
+    margin = {top: 20, right: 20, bottom: 110, left: 55},
+    margin2 = {top: 530, right: 20, bottom: 30, left: 55},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom,
     height2 = +svg.attr("height") - margin2.top - margin2.bottom;
@@ -12,15 +12,15 @@ var path = d3.geoPath();
 // set the x and y range for the context box
 var x = d3.scaleTime().range([0, width]),
     y = d3.scaleLinear().range([height2, 0]);
-// create an x axis for the context box
-var xAxis = d3.axisBottom(x);
+// create an x and y axis for the context box
+var xAxis = d3.axisBottom(x),
+    yAxis = d3.axisLeft(y);
+    
 // parse the datetime as year
 var parseDate = d3.timeParse("%Y");
 
 // define the size for the dots
 var size = d3.scaleLinear().range([2, 25]);
-
-var years = d3.scaleLinear().range([0, 1]);
 
 // area curve for the protests over years
 var area = d3.area()
@@ -40,6 +40,31 @@ svg.append("defs").append("clipPath")
         .attr("width", width)
         .attr("height", height);
 
+// add the tooltip
+var tip = d3.tip()
+    .attr('class', 'd3-tip')
+    .offset([-10, 0])
+    .html(function(d) {
+        return `<strong>Title: </strong><span>${d.title}</span><br />
+        <strong>When: </strong><span>${d.rptmm}/${d.rptdd}/${d.rptyy}</span><br />
+        <strong>Where: </strong><span>${d.where}</span><br />
+        <strong>What: </strong><span>${d.what}</span><br />
+        <strong>Participants: </strong><span>${d.partict}</span>`;
+    })
+svg.call(tip)
+// add the key to the dot sizes
+var key = svg.append("g")
+    .attr("class", "legendSize")
+    .attr("transform", "translate(650, 30)");
+  
+var legendSize = d3.legendSize()
+    .scale(size)
+    .shape('circle')
+    .labelFormat(".0e")
+    .shapePadding(30)
+    .labelOffset(20)
+    .orient('horizontal');          
+
 var map = svg.append("g")
     .attr("class", "map")
     //.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -55,7 +80,7 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
 
             // set the x and y domain for the context graph
             x.domain(d3.extent(data, function(d) { return parseDate(d.year); }));
-            y.domain([0, d3.max(data, function(d) { return d.parti; })]);
+            y.domain([0, d3.max(data, function(d) { return +d.parti; })]);
 
             // make the area plot for the protests over years
             context.append("path")
@@ -63,22 +88,22 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
                 .attr("class", "area")
                 .attr("d", area);
             
-             // add the axis
+             // add the axes
             context.append("g")
                 .attr("class", "axis axis--x")
                 .attr("transform", "translate(0," + height2 + ")")
                 .attr("fill", "#000")
                 .call(xAxis);
-            
-            // svg.append("rect")
-            //     .attr("class", "zoom")
-            //     .attr("width", width)
-            //     .attr("height", height)
-            //     //.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-            //     .call(zoom);
+            context.append("g")
+                .attr("class", "axis axis--y")
+                .attr("fill", "#000")
+                .call(yAxis);
 
             // set the domain for the dots
             size.domain([0, d3.max(protests, function(d) { return d.partict; })]);
+            svg.select(".legendSize")
+                .attr("fill", "#E82C0C")
+                .call(legendSize);
             // ###### add the map
             map.append("g")
                 .attr("class", "counties")
@@ -99,13 +124,19 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
                 .attr("cx", function (d) { return projection(JSON.parse(d.location))[0]; })
                 .attr("cy", function (d) { return projection(JSON.parse(d.location))[1]; })
                 .attr("r", function (d) { return size(d.partict); })
-                .attr("fill", "red")
+                .attr("fill", "#E82C0C")
                 .attr("id", function (d) { return "a" + d.id; })
-                .on("click", function(d) {
-                    d3.select(this)
-                    .attr("fill", "orange");
-                    console.log(d); // TODO: tooltip for the data
-                })
+                .on("mouseover", tip.show)
+                .on("mouseout", tip.hide);
+                // .on("mouseover", function(d) {
+                //     d3.select(this)
+                //     .attr("fill", "orange");
+                //     console.log(d); // TODO: tooltip for the data
+                // })
+                // .on("mouseout", function(d) {
+                //     d3.select(this)
+                //     .attr("fill", "#E82C0C");
+                // })
             // #########
 
             // add brushing
@@ -125,6 +156,7 @@ function brushed() {
     // this seems to be reallllyyy janky
     map.selectAll("circle").each(function(d) {
         var y = parseDate(+d.rptyy);
+        // select by id.. jank
         var elem = d3.select(`#a${d.id}`);
         if(y < s[0] || y > s[1]) {
             elem.attr("visibility", "hidden");

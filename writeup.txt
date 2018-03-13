@@ -1,0 +1,8 @@
+
+    The description with storyboards from part 1.
+    A brief description of your final interactive visualization application.
+    An explanation of changes between the storyboard and the final implementation.
+    The bundled source code for your application, uploaded as a webpage or file (either a .zip or .tar.gz archive). Please ensure that the software submitted is in working order. If any special instructions are needed for building or running your software, please provide them.
+    For submissions by groups of two, please also include a breakdown of how the work was split among the group members.
+    Finally, please include a commentary on the development process, including answers to the following questions: Roughly how much time did you spend developing your application? What aspects took the most time?
+
