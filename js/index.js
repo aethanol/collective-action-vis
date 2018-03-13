@@ -3,26 +3,24 @@ var svg = d3.select("svg"),
     margin2 = {top: 530, right: 20, bottom: 30, left: 40},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom,
-    height2 = +svg.attr("height") - margin2.top - margin2.bottom,
-    // height = +svg.attr("height"),
-    // width = +svg.attr("width");
-    // get the svg height and width to set the projection.. kinda janky
-    ogw = +svg.attr("width"),
-    ogh = +svg.attr("height");
+    height2 = +svg.attr("height") - margin2.top - margin2.bottom;
 
 // define the projection and map path
 var projection = d3.geoAlbersUsa().scale(1280).translate([960/2, 600/2]);
 var path = d3.geoPath();
 
+// set the x and y range for the context box
 var x = d3.scaleTime().range([0, width]),
     y = d3.scaleLinear().range([height2, 0]);
-
+// create an x axis for the context box
 var xAxis = d3.axisBottom(x);
-
+// parse the datetime as year
 var parseDate = d3.timeParse("%Y");
 
 // define the size for the dots
 var size = d3.scaleLinear().range([2, 25]);
+
+var years = d3.scaleLinear().range([0, 1]);
 
 // area curve for the protests over years
 var area = d3.area()
@@ -30,6 +28,10 @@ var area = d3.area()
     .x(function(d) { return x(parseDate(d.year)); })
     .y0(height2)
     .y1(function(d) { return y(d.parti); });
+
+var brush = d3.brushX()
+    .extent([[0, 0], [width, height2]])
+    .on("brush end", brushed);
 
 // path clipping?
 svg.append("defs").append("clipPath")
@@ -54,8 +56,7 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
             // set the x and y domain for the context graph
             x.domain(d3.extent(data, function(d) { return parseDate(d.year); }));
             y.domain([0, d3.max(data, function(d) { return d.parti; })]);
-            // set the domain for the dots
-            size.domain([0, d3.max(protests, function(d) { return d.partict; })]);
+
             // make the area plot for the protests over years
             context.append("path")
                 .datum(data)
@@ -75,7 +76,9 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
             //     .attr("height", height)
             //     //.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
             //     .call(zoom);
-            
+
+            // set the domain for the dots
+            size.domain([0, d3.max(protests, function(d) { return d.partict; })]);
             // ###### add the map
             map.append("g")
                 .attr("class", "counties")
@@ -97,16 +100,39 @@ d3.json("https://unpkg.com/us-atlas@1/us/10m.json", function(error, us) {
                 .attr("cy", function (d) { return projection(JSON.parse(d.location))[1]; })
                 .attr("r", function (d) { return size(d.partict); })
                 .attr("fill", "red")
-
+                .attr("id", function (d) { return "a" + d.id; })
                 .on("click", function(d) {
                     d3.select(this)
                     .attr("fill", "orange");
                     console.log(d); // TODO: tooltip for the data
                 })
             // #########
+
+            // add brushing
+            context.append("g")
+                .attr("class", "brush")
+                .call(brush)
+                .call(brush.move, x.range());
         });
     });
 });
+
+// brush and link based on the year that user specifies
+function brushed() {
+    // get the range of the brush
+    var s = d3.event.selection || x.range();
+    s = s.map(x.invert, x);
+    // this seems to be reallllyyy janky
+    map.selectAll("circle").each(function(d) {
+        var y = parseDate(+d.rptyy);
+        var elem = d3.select(`#a${d.id}`);
+        if(y < s[0] || y > s[1]) {
+            elem.attr("visibility", "hidden");
+        } else {
+            elem.attr("visibility", "visible");
+        }
+    })
+}
 
 // d3.json("data/us-10m.v1.json", function(error, us) {
 //     d3.json("data/protests.json", function(error, protests) {
