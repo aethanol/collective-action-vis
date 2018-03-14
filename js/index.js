@@ -55,13 +55,13 @@ svg.call(tip)
 // add the key to the dot sizes
 var key = svg.append("g")
     .attr("class", "legendSize")
-    .attr("transform", "translate(650, 30)");
+    .attr("transform", "translate(550, 15)");
   
 var legendSize = d3.legendSize()
     .scale(size)
     .shape('circle')
-    .labelFormat(".0e")
-    .shapePadding(30)
+    //.labelFormat(".0e")
+    .shapePadding(50)
     .labelOffset(20)
     .orient('horizontal');          
 
